@@ -1,0 +1,33 @@
+name: Build Classic Studio G
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -G Xcode
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Collect plugins
+        run: |
+          mkdir -p dist
+          cp -R build/ClassicStudioG_artefacts/Release/AU/*.component dist/
+          cp -R build/ClassicStudioG_artefacts/Release/VST3/*.vst3 dist/
+          # Ad-hoc sign so macOS will load the unsigned build on this Mac
+          codesign --force --deep --sign - dist/*.component
+          codesign --force --deep --sign - dist/*.vst3
+          cd dist && zip -ry ../ClassicStudioG-mac.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClassicStudioG-mac
+          path: ClassicStudioG-mac.zip
